@@ -1,0 +1,79 @@
+function sendDailyTaskReminder() { 
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  var data = sheet.getDataRange().getValues();
+  var today = new Date();
+  var tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  var todayFormatted = Utilities.formatDate(today, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  var tomorrowFormatted = Utilities.formatDate(tomorrow, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  var message = '';
+
+  var hasTodayTasks = false;
+  var hasTomorrowTasks = false;
+  var hasDueTasks = false;
+
+  // Tareas para hoy
+  message += '⏰Tareas para hoy (' + todayFormatted + '):\n';
+  message += '<ul>';
+
+  for (var i = 1; i < data.length; i++) {
+    var deadline = new Date(data[i][7]); // Índice de la columna "Deadline" (Start Date)
+    var deadlineFormatted = Utilities.formatDate(deadline, Session.getScriptTimeZone(), "yyyy-MM-dd");
+    var description = data[i][1]; // Índice de la columna "Descripción del problema"
+    
+    // Si la tarea es para hoy
+    if (deadlineFormatted === todayFormatted) {
+      message += '<li>' + description + ' - Fecha límite: ' + deadlineFormatted + '</li>';
+      hasTodayTasks = true; // Marcamos que hay tareas para hoy
+    }
+  }
+  message += '</ul>';
+
+  // Tareas para mañana
+  message += '\n✏️Tareas para mañana (' + tomorrowFormatted + '):\n';
+  message += '<ul>';
+
+  for (var i = 1; i < data.length; i++) {
+    var deadline = new Date(data[i][7]); // "Start Date"
+    var deadlineFormatted = Utilities.formatDate(deadline, Session.getScriptTimeZone(), "yyyy-MM-dd");
+    var description = data[i][1];
+
+    // Si la tarea es para mañana
+    if (deadlineFormatted === tomorrowFormatted) {
+      message += '<li>' + description + ' - Fecha límite: ' + deadlineFormatted + '</li>';
+      hasTomorrowTasks = true; // Marcamos que hay tareas para mañana
+    }
+  }
+  message += '</ul>';
+
+  // Tareas con fecha límite (Finish Date)
+  message += '\n🚨Tareas con fecha límite mañana (' + tomorrowFormatted + '):\n';
+  message += '<ul>';
+
+  for (var i = 1; i < data.length; i++) {
+    var finishDate = new Date(data[i][8]); // Índice de la columna "Finish Date"
+    var finishDateFormatted = Utilities.formatDate(finishDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
+    var description = data[i][1];
+
+    // Si la fecha de "Finish Date" es mañana
+    if (finishDateFormatted === tomorrowFormatted) {
+      message += '<li>' + description + ' - Fecha de finalización: ' + finishDateFormatted + '</li>';
+      hasDueTasks = true;
+    }
+  }
+  message += '</ul>';
+
+  // Enlace al Google Sheet
+  var sheetUrl = SpreadsheetApp.getActiveSpreadsheet().getUrl();
+  message += '<p>Para ver el documento original, haz clic <a href="' + sheetUrl + '">aquí</a>.</p>';
+
+  // Si hay tareas para hoy, mañana o con fecha límite, enviar el email
+  if (hasTodayTasks || hasTomorrowTasks || hasDueTasks) {
+    MailApp.sendEmail({
+      to: 'francisco.fernandez@isdin.com',  // Cambia a tu email  
+      subject: 'Tareas para hoy, mañana y con fecha límite',
+      htmlBody: message
+    });
+  }
+}
